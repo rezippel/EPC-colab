@@ -1,0 +1,909 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "EPC-Euclids Algorithm.ipynb",
+      "version": "0.3.2",
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "display_name": "Python 2",
+      "language": "python",
+      "name": "python2"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/rezippel/EPC-colab/blob/master/Ch1%20Euclids_Algorithm\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "O8D52c9JIOUi"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "#  Euclid's Algorithm"
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "M433JSmxIOUl"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "Among the mathematical problems we will investigate is the computation\n",
+        "of greatest common divisors, factoring into prime factors and finding\n",
+        "rational approximations.  These computations may be performed on a\n",
+        "variety of different mathematical quantities: polynomials, rational\n",
+        "integers, power series, differential operators, etc.  The most\n",
+        "familiar of these algebraic structures are the *natural numbers*:\n",
+        "${\\mathbb N} = \\{1, 2, 3, \\ldots\\}$.  If we include zero and \n",
+        "the negative integers we have $\\mathbb Z$, the ring of *rational\n",
+        "integers*. The elements of $\\mathbb Z$ are commonly called the \n",
+        "*integers*, but we will use the term integer for more complex\n",
+        "algebraic structures. \n",
+        "\n",
+        "This chapter begins our study of mathematical algorithms with an\n",
+        "investigation of a variety of computations involving the rational\n",
+        "integers.  Later chapters discuss more elaborate algorithms that deal\n",
+        "with polynomials and other algebraic structures.  Interestingly, the\n",
+        "resolution of some of these problems for the rational integers can\n",
+        "lead to algorithms that make use of polynomials, thus making the whole\n",
+        "process somewhat circular.\n"
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "VPCv5RWuTAdE"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "An integral part of our elementary education is learning to add and\n",
+        "multiply integers.  The hardware used in computers usually only\n",
+        "implements arithmetic operations for numbers of a specified length,\n",
+        "i.e., 32-bit or 64-bit integers.  In algebraic computation we often\n",
+        "use much larger integers; however, this is not because the answers are\n",
+        "so large.  Instead these large numbers arise in the middle of some\n",
+        "computation and then shrink towards the end.  This phenomenon is\n",
+        "called *intermediate expression swell*.\n",
+        "\n",
+        "Detailed algorithms for integer arithmetic may be found in many texts,\n",
+        "\\eg, {\\Knuth} \\cite{Knuth:II} and {\\Aho}, {\\Hopcroft} and {\\Ullman}\n",
+        "\\cite{Aho:Hopcroft:Ullman74}. But implementing efficient variable\n",
+        "precision arithmetic algorithms is a very delicate process that raises\n",
+        "many issues not touched upon in these texts, such as register usage,\n",
+        "cache turbulence and pipeline stalls.  For instance, properly\n",
+        "implemented classical algorithms work very well for larger integers\n",
+        "than one might expect.  Because of all of these reasons, because\n",
+        "numerous variable precision integer packages are available and because\n",
+        "an increasing number of programming languages now provide variable\n",
+        "precision integers as one of their basic types, we do not discuss\n",
+        "these arithmetic algorithms."
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "Sm7nJYP_IOUn"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "We begin with some basic definitions.  When a rational integer $m$ can\n",
+        "be written as a product of two other integers $p$ and $q$, $m = pq$,\n",
+        "then $p$ and $q$ are called *divisors* of $m$ and\n",
+        "$m$ is said to be <a id=\"integer-divisibility\">*divisible*</a>  by $p$ and\n",
+        "$q$.We write $p \\mid m$ to indicate that\n",
+        "$p$ divides $m$ and $p \\nmid m$ if $p$ does not divide $m$.\n",
+        "\n",
+        "The only rational integers that have multiplicative inverses are\n",
+        "$1$ and $-1$.  Because they have multiplicative inverses they are\n",
+        "called *units*. Two integers whose ratio is\n",
+        "a unit are said to be *associates*, e.g., $3$ and $-3$ are associates.\n",
+        "For simplicity we ignore associates when enumerating the divisors of an integer.\n",
+        "Thus every non-unit has at least two divisors, $1$ and itself (up to\n",
+        "associates).  An integer that has only these two \"trivial\"\n",
+        "divisors is called a *prime*.  All other\n",
+        "non-units are called *composite*."
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "clUymn9sIOUp"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "An $k$ divides $n$ if and only if, the remainder of $n$ divided by $k$ is zero. This definition can be immediately translated into python using the `%` operator."
+      ]
+    },
+    {
+      "metadata": {
+        "cellView": "both",
+        "colab_type": "code",
+        "id": "bJaed2wtIOUu",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "def isDivides(k, n) :\n",
+        "    return n % k == 0"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "cellView": "both",
+        "colab_type": "code",
+        "id": "UN8wt4MXIOUy",
+        "outputId": "78b3cd7e-d30d-46ec-d2ab-3742a1025285",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "[isDivides(4, 12), isDivides(6, 25)] "
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "[True, False]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 2
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "kGeAA9LlIOU7"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "A simple approach to determine if a number is prime is to divide it by all smaller integers. The following function is only slightly more sophisticated. It first checks to see if the number is divisible by $2$ (the only even prime number), and then checks for divisibiity by odd numbers. By convention, $0$ and $1$ are not considered to be primes, nor are negative numbers. \n",
+        "\n",
+        "Over the course of these notes, we will explore several different algorithms for determining if integers are prime. This is only the first, and simplest."
+      ]
+    },
+    {
+      "metadata": {
+        "cellView": "both",
+        "colab_type": "code",
+        "id": "I7exCiV4IOU9",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "def isPrime_v1(x):\n",
+        "    if x < 2 :\n",
+        "        return False\n",
+        "    elif x == 2 :\n",
+        "        return True\n",
+        "    elif isDivides(2, x) :\n",
+        "        return False\n",
+        "    else:\n",
+        "        for d in range(3, x, 2):\n",
+        "            if isDivides(d, x) :\n",
+        "                return False\n",
+        "        return True"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "cellView": "both",
+        "colab_type": "code",
+        "id": "HK_igfUdIOVB",
+        "outputId": "d36f4ff4-06b7-4ed0-b8cd-9c7d1c27381f",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "map(lambda x: [x, isPrime_v1(x)], range(1,12))"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "[[1, False],\n",
+              " [2, True],\n",
+              " [3, True],\n",
+              " [4, False],\n",
+              " [5, True],\n",
+              " [6, False],\n",
+              " [7, True],\n",
+              " [8, False],\n",
+              " [9, False],\n",
+              " [10, False],\n",
+              " [11, True]]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 4
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "cellView": "both",
+        "colab_type": "code",
+        "id": "uv1zkNJQIOVK",
+        "outputId": "ff951bc6-a39a-40f2-a7c1-f498398fe4fe",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "isPrime_v1(1093)"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "True"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 5
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "Bw3hDlczIOVO"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "A presentation of a positive integer $N$ as a product of positive\n",
+        "integers, $N = m_1 \\cdots m_k$, is called a *factorization* of\n",
+        "$N$.  A factorization of an integer is said to be *complete* if each of the $m_i$ is a\n",
+        "prime or a power of a prime.  Unless otherwise noted, all\n",
+        "factorizations are complete.  We usually write such factorizations as\n",
+        "$N= p_1^{e_1} \\cdots p_k^{e_k}$.  The *fundamental theorem of arithmetic* states that the factorization of a\n",
+        "rational integer is unique."
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "v46D2VXxTPlc"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "The factoring problem for an integer $N$ is, at the moment, very\n",
+        "difficult.  Trying all possible divisors takes time $O(\\sqrt{N})$.\n",
+        "Very roughly, the best known algorithms take time $O(\\exp(\\sqrt{\\log\n",
+        "N}))$, which, though much better, is not near what would be expected\n",
+        "of a polynomial time algorithm: $O(\\log^k N)$.  Interestingly, the\n",
+        "time required to factor a polynomail of degree $n$ is only about $O(n^5)$.\n",
+        "\n",
+        "An integer $d$ that divides both $m$ and $n$ is called a *common\n",
+        "divisor* of $m$ and $n$.  The number $m/d$ is called the\n",
+        "*cofactor* of $m$ with respect to $d$.  The largest common\n",
+        "divisor of two integers is called a *greatest common divisor*\n",
+        "(GCD).  If the greatest common divisor of two integers is $1$,\n",
+        "then we say they are *relatively prime*.\n",
+        "When dealing with rational numbers, more time is probably spent\n",
+        "computing the GCD of integers than any operation other than\n",
+        "addition and multiplication.  When using rational functions, it is not\n",
+        "unusual for the time spent computing polynomial GCDs to dominate\n",
+        "all other arithmetic operations.  Section \\sectref{Integer:Euclidean:Sec}\n",
+        "discusses Euclid's algorithm for computing the GCD of two\n",
+        "integers.  Euclid's algorithm provides an entré to many facets of\n",
+        "elementary number theory.  The other sections of this chapter\n",
+        "illustrate several of these ideas.  Later chapters delve into each of\n",
+        "the issues raised in more detail.\n"
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "G8njcgaoXjuD"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "## Euclidean Algorithm\n",
+        "\\label{Integer:Euclidean:Sec}\n",
+        "\n",
+        "The *Euclidean algorithm* for computing the GCD of two\n",
+        "integers has been known at least from the time of Euclid\n",
+        "\\cite{Euclidean:Algorithm}, who called it \"\\key{anthyparesis}.\"  Most\n",
+        "likely, it is the oldest mathematical algorithm in existence.  The\n",
+        "principles underlying the Euclidean algorithm are fundamental to the\n",
+        "solution of many problems in mathematics ranging from diophantine\n",
+        "approximation to elimination.  Because of its importance, and because\n",
+        "it is the first algorithm we consider, we derive Euclid's algorithm in\n",
+        "some detail.\n",
+        "\n",
+        "Let $m > n$ be two positive rational integers.  Denote by $d$ some\n",
+        "common divisor of $m$ and $n$.  $d$ also divides, $m+n$ and $m-n$.  In\n",
+        "fact, $d$ divides every number of the form $am - bn$, where $a$ and\n",
+        "$b$ are rational integers.  Denote by $M$ the set of all such numbers\n",
+        "$$\n",
+        "M = \\{ am - bn \\mid a,b \\in \\mathbb{Z}\\}.\n",
+        "$$\n",
+        "Since every common divisor of $m$ and $n$ divides every element of\n",
+        "$M$, each is also a multiple of the greatest common divisor of $m$ and\n",
+        "$n$.  Thus the smallest positive element of $M$ is the GCD of $m$ and\n",
+        "$n$.\n",
+        "\n",
+        "To make this an algorithm, we use a simple recursive technique that\n",
+        "converts a pair of elements in $M$ into a pair of smaller elements.\n",
+        "This process terminates with the pair $0$ and the GCD of $m$ and\n",
+        "$n$.  The simplest approach is to replace the pair $(m,n)$ by\n",
+        "$(m-n,n)$, and then $(m-2n, n)$, and so on until $m-kn < n$.  At this\n",
+        "point the two values are interchanged and the new pair is $(n, m-kn)$.\n",
+        "\n",
+        "All of the subtraction operations prior to an interchange of $m-n$ and\n",
+        "$n$ can be collapsed into a single division:\n",
+        "$$\n",
+        "\\label{eq:Remainder}\n",
+        "m = q n + r.\\qquad\\qquad 0 \\le r < n \n",
+        "$$\n",
+        "In this case, $r$ is called the *remainder* of $m$ divided by $n$.\n",
+        "(This definition works both for positive and negative values of $m$\n",
+        "and $n$.)  Now let $n_1 = m$ and $n_2 = n$.  The sequence of\n",
+        "divisions and remainders used in the GCD algorithm would look like:\n",
+        "$$\n",
+        "\\begin{aligned}\n",
+        "   n_1 &= q_1 n_2 + n_3\\\\\n",
+        "   n_2&=q_2 n_3 + n_4\\\\\n",
+        "     &\\vdots\\\\\n",
+        "   n_k& = q_k n_{k+1} + 0\n",
+        "\\end{aligned}\n",
+        "\\label{eq:IntRemainderSeq}\n",
+        "$$\n",
+        "\n",
+        "This sequence of operations is called a *remainder sequence*, and\n",
+        "its use to compute the GCD of two numbers is called Euclid's\n",
+        "algorithm.  \\figref{Int:Euclid:Alg:Fig} illustrates the computation of\n",
+        "the GCD of $15027133$ and $8562227$.  In this case the GCD\n",
+        "is $163$, which we write as $(10527133, 8562227) = 163$.\n",
+        "\n",
+        "$$\n",
+        "\\begin{aligned}\n",
+        "  15027133 &= 1 \\cdot 8562227 + 6464906\\\\\n",
+        "  8562227  &= 1 \\cdot 6464906 + 2097321\\\\\n",
+        "  6464906  &= 3 \\cdot 2097321 + 172943\\\\\n",
+        "  2097321  &= 12 \\cdot 172943  + 22005\\\\\n",
+        "  172943   &= 7 \\cdot 22005   + 18908\\\\\n",
+        "  22005    &= 1 \\cdot 18908   + 3097\\\\\n",
+        "  18908    &= 6 \\cdot 3097    + 326\\\\\n",
+        "  3097     &= 9 \\cdot 326     + 163\\\\\n",
+        "  326      &= 2 \\cdot 163     + 0\n",
+        "\\end{aligned}\n",
+        "$$\n",
+        "\n",
+        "The following recursive function gives a direct implementation of the\n",
+        "Euclidean algorithm for two positive integers, based on the discussion\n",
+        "of the previous few paragraphs.\n"
+      ]
+    },
+    {
+      "metadata": {
+        "cellView": "both",
+        "colab_type": "code",
+        "id": "QLNuiVhMXa-J",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "def Integer_GCD(m, n) :\n",
+        "  if m < n :\n",
+        "    return Integer_GCD(n, m)\n",
+        "  elif n == 0 :\n",
+        "    return m\n",
+        "  else :\n",
+        "    return Integer_GCD(n, m % n)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "uKjTUUi5KDa2",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        },
+        "outputId": "fa70e274-9066-4085-a73c-5ad37308613a"
+      },
+      "cell_type": "code",
+      "source": [
+        "def Integer_GCD2(m, n):\n",
+        "  if m < 0:\n",
+        "    m = -m\n",
+        "  if n < 0:\n",
+        "    n = -n\n",
+        "  if n > m:\n",
+        "    m,n = n,m\n",
+        "  while n > 0:\n",
+        "    m,n = n, m % n\n",
+        "  return m\n",
+        "\n",
+        "Integer_GCD2(689237472347,39123487309124124134111)"
+      ],
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "1L"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 11
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "vqf7Z1FXJFfB",
+        "colab_type": "text"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "The bulk of the work is performed in the remainder calculation.  For\n",
+        "some machines, it may be substantially cheaper to compute something\n",
+        "slightly larger than the remainder.  For instance, the first several\n",
+        "bits of $m$ and $n$ allow us to estimate the size and first few bits\n",
+        "of the quotient of $m$ and $n$ quickly.  Using this value, something\n",
+        "close to the remainder can be computed quite quickly.  Other\n",
+        "algorithms are described in Section 4.5.2 of {\\Knuth} \\cite{Knuth:II}.\n",
+        "\n",
+        "The second question we have about every algorithm is: How fast is it?\n",
+        "(The first question is whether or not the algorithm gives the correct\n",
+        "answer!)  To answer this question we bound the number of remainder\n",
+        "steps required \n",
+        "to compute the GCD of two integers.  Denote by $F(N)$ the\n",
+        "maximum number of \n",
+        "remainder steps required to compute the GCD of two positive\n",
+        "numbers less than $N$.\n",
+        "\n",
+        "Assume $u > v$ are two positive integers without a common factor, each\n",
+        "larger than $N$ and chosen such that the quotients in their remainder\n",
+        "sequence are all $1$.  Thus, the GCD of two integers smaller\n",
+        "than $N$ cannot take any more steps than the number required by $u$\n",
+        "and $v$.  The pair of integers $u+v$ and $u$ also has a remainder\n",
+        "sequence where each $q_i$ is $1$, and the remainder sequence for\n",
+        "$(u+v, u)$ is one step longer than that for $(u, v)$.  The sequence\n",
+        "$v, u, u+v, 2u+v, \\ldots$, can be continued as far as one would like."
+      ]
+    },
+    {
+      "metadata": {
+        "id": "vPdqhETSJFfC",
+        "colab_type": "text"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "To obtain a bound on the number of steps in a GCD algorithm, we need\n",
+        "to be able to compute the growth rate of the terms of this sequence.\n",
+        "A crude bound can be determined by the following simple reasoning.\n",
+        "\n",
+        "Assume that when the Euclidean algorithm is applied to two integers\n",
+        "$F$ and $G$, $F > G$, the remainder sequence is as long as possible.\n",
+        "For this to be the case, the quotient of $F$ divided by $G$ should be\n",
+        "$1$.  Denote the remainder by $H$.  For $F$ and $G$ to have a long\n",
+        "remainder sequence $G$ and $H$ must also.  Thus the quotient of $G$\n",
+        "divided by $H$ should also be one.  This suggests that we should\n",
+        "consider the sequence of numbers $f_i$ satisfying the \n",
+        "recurrence\n",
+        "$$\n",
+        "\\label{eq:Fibonacci}\n",
+        "f_{i+1} = f_i + f_{i-1},\n",
+        "$$\n",
+        "where we can take the basis of the *difference equation* to be \n",
+        "$f_{1} = f_{2} = 1$.  $f_i$ has a remainder sequence of length $i-1$ when\n",
+        "divided by $f_{i-1}$ and no smaller number can have a remainder\n",
+        "sequence so long. \\label{Fibonacci:Remainder:Sequence}\n",
+        "\n",
+        "Since the integer quotient of $f_{i}$ divided by $f_{i-1}$ is $1$,\n",
+        "$f_{i} < 2 f_{i-1}$.  This allows us to bound $f_{i+1}$ above and\n",
+        "below as follows:\n",
+        "$$\n",
+        "3 f_{i-1} > f_{i+1} > \\frac{3}{2} f_{i},\n",
+        "\\quad\\mbox{or}\\quad\n",
+        "c_1\\left(\\sqrt{3}\\right)^i > f_{i+1} > c_2 (\\frac{3}{2})^{i}.\n",
+        "$$\n",
+        "Consequently, $F(N) = O(\\log N)$.\n",
+        "\n",
+        "We can improve the constants in the estimates for $f_{i+1}$ above with\n",
+        "only a bit more work.  Assume that for large $i$ the ratio between\n",
+        "$f_{i+1}$ and $f_i$ tends to a constant, $\\phi$.  Then for sufficiently\n",
+        "large $n$ we have \n",
+        "$$\n",
+        "\\phi = \\frac{f_{n+1}}{f_n} = \\frac{f_n + f_{n-1}}{f_n} = 1 + \\frac{1}{\\phi}.\n",
+        "$$\n",
+        "This gives a quadratic equation for $\\phi$, $x^2 - x - 1=0$, whose\n",
+        "only positive solution is\n",
+        "$$\n",
+        "\\phi = \\frac{1 + \\sqrt{5}}{2} \\approx 1.618033988749894.\n",
+        "$$\n",
+        "So we expect $f_i = c_1 \\phi^i$.  \n",
+        "Notice that this lies between the bounds given above of $\\sqrt{3} =\n",
+        "1.732$ and $3/2 = 1.5$.  "
+      ]
+    },
+    {
+      "metadata": {
+        "id": "2pXG9tp2JFfD",
+        "colab_type": "text"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "We can go further and determine an exact formula for $f_i$.  Notice that if\n",
+        "$\\alpha$ is a zero of $x^{2} -x -1$ then $\\alpha^{i}$ will satisfy\n",
+        "(\\ref{eq:Fibonacci}): \n",
+        "$$\n",
+        "f_{i+1} - f_{i} - f_{i-1} = \\alpha^{i+1} - \\alpha^{i} - \\alpha^{i-1}\n",
+        " = \\alpha^{i-1} ( \\alpha^{2} - \\alpha -1) = 0.\n",
+        "$$\n",
+        "Since (\\ref{eq:Fibonacci}) is a linear \\key{difference equation},\n",
+        "linear combinations of the solutions of (\\ref{eq:Fibonacci}) are also\n",
+        "solutions.  The negative solution of the quadratic equation is $1-\\phi\n",
+        "= -1/\\phi$. Consequently,\n",
+        "$$\n",
+        "f_i = c_1 \\phi^i + c_2 (-\\phi)^{-i},\n",
+        "$$\n",
+        "where, as with ordinary differential equations, $c_1$ and $c_2$ are\n",
+        "determined by the \"initial conditions.\"  Using $i = 1$ and $i=2$ we\n",
+        "have\n",
+        "$$\n",
+        "\\begin{aligned}\n",
+        "  c_1 \\phi - c_2 \\phi^{-1} &= f_{1} = 1,\\\\\n",
+        "  c_1 \\phi^2 + c_2 \\phi^{-2}&= f_{2} = 1,\n",
+        "\\end{aligned}\n",
+        "$$\n",
+        "whose solution is\n",
+        "$$\n",
+        "\\begin{aligned}\n",
+        "  c_1 &= \\frac{\\phi +1}{\\phi^3 +\\phi} = \\frac{1}{\\sqrt{5}},\\\\\n",
+        "  c_2&=\\frac{\\phi^2 - \\phi^3}{\\phi^2 + 1} = - \\frac{1}{\\sqrt{5}}\n",
+        "\\end{aligned}\n",
+        "$$\n",
+        "Thus,\n",
+        "$$\n",
+        "f_i = \n",
+        "\\frac{1}{\\sqrt{5}} \\left[\n",
+        "\\left(\\frac{1 + \\sqrt{5}}{2}\\right)^i -\n",
+        "        \\left(\\frac{1 - \\sqrt{5}}{2}\\right)^i \\right]\n",
+        "$$"
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "8deAl7dXWVHw"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "This sequence of numbers is called the *Fibonacci numbers*.  They\n",
+        "were first mentioned by {\\Fibonacci} \\cite[pages 283--285]{Fibonacci}\n",
+        "and have important applications in number theory, complexity theory\n",
+        "and many other fields.\n",
+        "\n",
+        "Since the negative solution of the quadratic equation has absolute\n",
+        "value less than $1$, for large $i$, the Fibonacci numbers can be\n",
+        "approximated by\n",
+        "$$\n",
+        "f_i = \\frac{\\phi^i}{\\sqrt{5}}\n",
+        "$$\n",
+        "for large $i$. Consequently,\n",
+        "$$\n",
+        "F(N) \\approx \\frac{\\log \\sqrt{5} N}{\\log \\phi} = \\log_{\\phi} \\sqrt{5} N.\n",
+        "$$\n",
+        "These results were first demonstrated  by {\\Lame} in 1844 \\cite{Lame44}.\n",
+        "\n",
+        "The techniques used to solve this simple *difference equation* are\n",
+        "similar to those used to solve constant coefficient linear\n",
+        "differential equations.  More complicated difference equations often\n",
+        "occur when analyzing algorithms and in other problems.  Obtaining\n",
+        "closed form and asymptotic solutions of difference equations is\n",
+        "somewhat similar to the corresponding problems for differential\n",
+        "equations where symbolic techniques have had dramatic success in\n",
+        "recent years.  The field of difference equation problems has not been\n",
+        "as closely examined and remains a fertile area for future research."
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "FtbUNw8lUyqd"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "## Diophantine Approximations\n",
+        "\\label{Euclid:DA:Sec}\n",
+        "\n",
+        "Returning to the original problem, assume we are interested in\n",
+        "computing the GCD of $n_1$ and $n_2$.  For simplicity we assume\n",
+        "the GCD is $1$.  Define $M$ to be the set\n",
+        "$$\n",
+        "M = \\{ n_1 X - n_2 Y \\mid X, Y \\in \\mathbb{Z} \\}.\n",
+        "$$\n",
+        "The GCD of $n_1$ and $n_2$ is the smallest positive element of $M$.\n",
+        "In other words, we want to find the smallest non-trivial value of the\n",
+        "binary form $|n_1 X - n_2 Y|$.  Another way to say this, is that we want\n",
+        "to find the best possible rational number approximation to $n_1/n_2$:\n",
+        "$$\n",
+        "\\left|\\frac{n_1}{n_2} - \\frac{Y}{X}\\right| \\le \\frac{1}{n_2 X} < \\frac{1}{X^2}.\n",
+        "$$\n",
+        "\n",
+        "Looking closely at the remainder sequence \\eqnref{Int:RemainderSeq:Eq}, we can see how to find\n",
+        "the candidate solutions $X$ and $Y$.  By isolating the remainder terms\n",
+        "on one side of the equation we have\n",
+        "$$\n",
+        "  \\begin{aligned}\n",
+        "    n_1 - q_1 n_2 &= n_3,\\\\\n",
+        "    n_2 - q_2 n_3 &= n_4,\\\\\n",
+        "     &\\vdots\\\\\n",
+        "    n_{k-1} - q_{k-1} n_{k} &= 1.\n",
+        "  \\end{aligned}\n",
+        "$$\n",
+        "We can substitute the value of $n_3$ given in the first equation into\n",
+        "the second equation, to get a relationship between $n_1$, $n_2$ and\n",
+        "$n_4$:\n",
+        "\\label{Euclid:Int:D:Eq}\n",
+        "$$\n",
+        "-q_2 n_1 + (q_1 q_2 + 1) n_2 = n_4.\n",
+        "$$\n",
+        "Writing this relation in the form of an approximation to $n_1/n_2$  gives\n",
+        "$$\n",
+        "\\left|\\frac{n_1}{n_2} - \\frac{q_1 q_2 + 1}{q_2}\\right| \n",
+        "= \\frac{n_4}{n_2 q_2}.\n",
+        "$$\n",
+        "\n",
+        "Using \\eqnref{Euclid:Int:D:Eq}, and $n_3 = n_1 - q_1 n_2$, we can\n",
+        "obtain a relationship between $n_1$, $n_2$ and $n_5$:\n",
+        "$$\n",
+        "\\left|\\frac{n_1}{n_2} - \\frac{q_1 q_2 q_3 + q_1 + q_3}{q_2 q_3 +1 }\\right| \n",
+        "= \\frac{n_5}{n_2 (q_2 q_3 +1)}.\n",
+        "$$\n",
+        "Notice that \n",
+        "$$\n",
+        "\\frac{n_4}{n_2 q_2} > \\frac{n_5}{n_2 (q_2 q_3 +1)},\n",
+        "$$\n",
+        "so the Euclidean algorithm is actually producing increasingly accurate\n",
+        "approximations to $n_1/n_2$.\n",
+        "\n",
+        "When this process is taken to its logical conclusion, one obtains two\n",
+        "polynomials $X$ and $Y$ in the quotients $q_1, \\ldots, q_{k-1}$ such\n",
+        "that\n",
+        "$$\n",
+        " n_1 X - n_2 Y = 1,\n",
+        "$$\n",
+        "since $n_1$ and $n_2$ are relatively prime.  $Y/X$ is a quite\n",
+        "good approximation to $n_1/n_2$:\n",
+        "$$\n",
+        "\\left|\\frac{n_1}{n_2} - \\frac{Y}{X}\\right| = \\frac{1}{n_2 X} \n",
+        "   <  \\frac{1}{X^2}.\n",
+        "$$\n",
+        "Observe that fractions with a denominator of $X$ can only approximate\n",
+        "real numbers to an accuracy of $1/2X$.  \n",
+        "\n",
+        "The problem just studied can be phrased as trying to minimize the\n",
+        "value of the form $X r - Y$, where $r$ is a rational number.  There are\n",
+        "many interesting generalizations.  If $r$ is replaced by an algebraic\n",
+        "number, then it turns out that there are an infinite number of\n",
+        "\"exceptionally\" good approximations to $r$ if $r$ is the solution of\n",
+        "a quadratic equation with integer coefficients, but only a finite\n",
+        "number of such solutions when $r$ is of higher degree.\n",
+        "\n",
+        "It is also interesting to consider multiple approximations.  Given\n",
+        "real numbers $\\alpha_1, \\alpha_2, \\ldots, \\alpha_k$, we would like to\n",
+        "find integers that minimize the linear form:\n",
+        "$$\n",
+        "\\left|X_0 + X_1 \\alpha_1 + X_2 \\alpha_2 + \\cdots + X_k \\alpha_k \\right|.\n",
+        "$$\n",
+        "This type of problem is discussed in \\chapref{Lattice:Chap} and can be\n",
+        "used to develop theoretically efficient algorithms for factoring\n",
+        "polynomials.\n",
+        "\n"
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "nBU1asdSVowd"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "## Continued Fractions\n",
+        "\\label{Euclid:CF:Sec}\n",
+        "\n",
+        "The approximation ideas of the previous section can be further developed\n",
+        "by rewriting the remainder sequence \\eqnref{Int:RemainderSeq:Eq} in terms\n",
+        "of fractions.  This gives:\n",
+        "\\label{Euclid:CF:Eq}\n",
+        "$$\n",
+        "  \\begin{aligned}\n",
+        "    \\frac{n_1}{n_2} &= q_1 + \\frac{n_3}{n_2},\\\\\n",
+        "    \\frac{n_2}{n_3} &= q_2 + \\frac{n_4}{n_3},\\\\\n",
+        "     &\\vdots\\\\\n",
+        "    \\frac{n_{k-1}}{n_k} &=  q_{k-1} + \\frac{1}{n_k}.\n",
+        "  \\end{aligned}\n",
+        "$$\n",
+        "Replacing $n_3/n_2$ by the value in the second of these equations,\n",
+        "and continuing we have:\n",
+        "$$\n",
+        "\\begin{aligned}\n",
+        "\\frac{n_1}{n_2} &= q_1 + \\frac{n_3}{n_2} = \n",
+        " q_1 + \\frac{1}{\\displaystyle q_2 + \\frac{n_4}{n_3}}, \\\\\n",
+        "& = \\frac{n_1}{n_2} = q_1 + \\frac{1}{\\displaystyle q_2 + \n",
+        "    \\frac{1}{\\displaystyle q_3 + 1 \\frac{1}{\\displaystyle q_4 +\n",
+        "\\ddots}}}.\n",
+        "\\end{aligned}\n",
+        "$$\n",
+        "This strange way of writing the fraction $n_1/n_2$ is called a\n",
+        "*continued fraction*.   The $q_i$ that appear in the continued\n",
+        "fraction are called the *partial quotients*.\\index{partial\n",
+        "quotient} From\n",
+        "\\eqnref{Euclid:CF:Eq} and using the fact that $n_1 > n_2 > n_3 >\n",
+        "\\cdots$ we see that  $q_i$ is the integer part of $n_i/n_{i+1}$.\n",
+        "\n",
+        "Truncating the continued fraction and clearing the denominators:\n",
+        "$$\n",
+        "\\begin{aligned}\n",
+        "q_1 + \\frac{1}{q_2} & = \\frac{q_1 q_2 + 1}{q_2}, \\\\\n",
+        "q_1 + \\frac{1}{\\displaystyle q_2 + \n",
+        "    \\frac{1}{\\displaystyle q_3}} & = \n",
+        "  \\frac{q_1 q_2 q_3 + q_1 + q_3}{q_2 q_3 + 1}.\n",
+        "\\end{aligned}\n",
+        "$$\n",
+        "Notice that these are the \"exceptionally\" good approximations to\n",
+        "$n_1/n_2$ discovered earlier.  This property is one of the reasons for\n",
+        "the interest in continued fractions.  \\chapref{CF:Chap} discusses some\n",
+        "of the properties of continued fractions in more detail and how to\n",
+        "perform calculations with them."
+      ]
+    },
+    {
+      "metadata": {
+        "colab_type": "text",
+        "id": "TF_LPAivTlLD"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "## Diophantine Equations\n",
+        "\\label{Euclid:DE:Sec}\n",
+        "\n",
+        "If we are only interested in the integral (or perhaps rational)\n",
+        "solutions of a polynomial equation (or system of equations), then we\n",
+        "call the problem a {\\em diophantine} problem.\\index{diophantine\n",
+        "equation} The simplest diophantine equation has already appeared.  To\n",
+        "compute the best rational approximation of $n_1/n_2$ we were looking\n",
+        "for integers $X$ and $Y$ such that\n",
+        "\\label{Euclid:Approx:Eq}\n",
+        "$$\n",
+        "n_1 X - n_2 Y = 1.\n",
+        "$$\n",
+        "This is a  diophantine equation in $X$ and $Y$ since only elements of\n",
+        "${\\mathbb Z}$ are of interest in its solution.\n",
+        "\n",
+        "This equation does have an infinite number of solutions, however.  Let\n",
+        "$x$ and $y$ be a solution of \\eqnref{Euclid:Approx:Eq}.  Then $x+n_2\n",
+        "t$ and $y+ n_1 t$ is also a solution for integral values of $t$.  Thus\n",
+        "there are a countable number of solutions to \\eqnref{Euclid:Approx:Eq}\n",
+        "as a diophantine problem.\n",
+        "\n",
+        "Diophantine equations arise in a number of problems.  We give two more\n",
+        "examples here.  An integral \\keyi{Pythagorean triangle} is a right\n",
+        "triangle (in Euclidean space) whose sides are each rational integers.\n",
+        "By the Pythagorean theorem their sides are zeroes of\n",
+        "$$\n",
+        "x^2 + y^2 = z^2,\n",
+        "$$\n",
+        "where $z$ is the length of the hypotenuse.  This equation involves three\n",
+        "unknown variables and is quadratic, not linear.  As an equation over\n",
+        "the reals, it has a continuously infinite number of solutions.  As a\n",
+        "diophantine equation, it has only a countably infinite number of\n",
+        "solutions, which can be parameterized as \n",
+        "\\label{PythagEq:Soln:Eq}\n",
+        "$$\n",
+        "x = r^2 - s^2, \\quad y = 2rs, \\quad z = r^2 + s^2.\n",
+        "$$\n",
+        "We leave the proof of this to the reader.  \n",
+        "\n",
+        "What integers can arise as the sides of a Pythagorean triangle?  Any\n",
+        "even integer, \\eg, $2k$ can be a side:\n",
+        "$$\n",
+        "(k^2 - 1 , 2k, k^2+1).\n",
+        "$$\n",
+        "Odd integers can also be sides, since every odd number is the difference\n",
+        "of two squares, $2k+1 = (k+1)^2 - k^2$.  Thus,\n",
+        "$$\n",
+        "(2k+1, k(k+1), 2k^2+2k +1)\n",
+        "$$\n",
+        "is a Pythagorean triple.\n",
+        "\n",
+        "A more challenging question is: Which rational integers can be the\n",
+        "*area* of a Pythagorean triangle?  If the sides of the triangle\n",
+        "are restricted to be rational integers then the area must be of the\n",
+        "form $rs(r^2-s^2)$.  However, it is more interesting to consider\n",
+        "triangles whose sides are rational numbers and whose area is an\n",
+        "integer.{TODO: Need to give an example here and give a bit more detail.}\n",
+        "\n",
+        "Pythagorian triangles with rational sides can be determined by\n",
+        "allowing $r$ and $s$ to be rational in \\eqnref{PythagEq:Soln:Eq}.  (Do\n",
+        "all Pythagorean triangles with rational sides arise in this fashion?)\n",
+        "\n",
+        "The integer $n$ is the area of a Pythagorean triangle if $xy = 2n$ and\n",
+        "$x^2 +y^2 = z^2$.  Eliminating $y$ we have\n",
+        "$$\n",
+        "x^2 + \\left(\\frac{2n}{x}\\right)^2 = z^2 \\Longrightarrow x^4 + 4n^2 =\n",
+        "(xz)^2.\n",
+        "$$\n",
+        "Rewriting this slightly, we want to know if there exist rational\n",
+        "numbers $u$ and $v$ such that\n",
+        "\\label{Euclid:Cong:Eq}\n",
+        "$$\n",
+        "u^2 = v^4 + 4n^2.\n",
+        "$$\n",
+        "This is a far harder diophantine equation to solve.  In this case\n",
+        "there are only a finite number of solutions and proving this is quite\n",
+        "difficult.  To do so requires techniques of *elliptic\n",
+        "curves*. This problem is beyond the grasp of the\n",
+        "techniques discussed in this book.  A nice presentation of the\n",
+        "mathematics relevant to this problem and its solution is given in\n",
+        "{\\Koblitz}'s book \\cite{Koblitz:Elliptic}."
+      ]
+    },
+    {
+      "metadata": {
+        "id": "9tsXzIh8JFfJ",
+        "colab_type": "text"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "# References\n",
+        "\n",
+        "<mark> <b>The bib file biblio.bib was not found\n",
+        "\n",
+        "</b> </mark>(<a id=\"cit-Knuth:II\" href=\"#call-Knuth:II\">?</a>) !! _This reference was not found in biblio.bib _ !!\n",
+        "\n",
+        "(<a id=\"cit-Aho:Hopcroft:Ullman74\" href=\"#call-Aho:Hopcroft:Ullman74\">?</a>) !! _This reference was not found in biblio.bib _ !!\n",
+        "\n",
+        "(<a id=\"cit-Euclidean:Algorithm\" href=\"#call-Euclidean:Algorithm\">?</a>) !! _This reference was not found in biblio.bib _ !!\n",
+        "\n",
+        "(<a id=\"cit-Fibonacci\" href=\"#call-Fibonacci\">?</a>) !! _This reference was not found in biblio.bib _ !!\n",
+        "\n",
+        "(<a id=\"cit-Lame44\" href=\"#call-Lame44\">?</a>) !! _This reference was not found in biblio.bib _ !!\n",
+        "\n",
+        "(<a id=\"cit-Koblitz:Elliptic\" href=\"#call-Koblitz:Elliptic\">?</a>) !! _This reference was not found in biblio.bib _ !!\n",
+        "\n"
+      ]
+    }
+  ]
+}
